@@ -143,7 +143,7 @@ int performExec(char **arg, char *jString)
 
 int performRedirection(char **instruction, char **inOrOut, char **filesToBeRedirected, int sharedSize, char *jString)
 {
-    printf("we are in redirect function \n");
+    //printf("we are in redirect function \n");
     int status;
     int cloneSTDIN;
     int dontCloneSTDIN; // equals 1: file exists for STDIN, equals 0: otherwise
@@ -156,8 +156,8 @@ int performRedirection(char **instruction, char **inOrOut, char **filesToBeRedir
         if (strcmp(inOrOut[i], ">") == 0)
         {
             //printf("inside of >: FTBR is %s\n", filesToBeRedirected[i]);
-            printf("inOurOut val: %s\n", inOrOut[i]);
-            printf("filesToBeRedirected: %s\n", filesToBeRedirected[i]);
+            // printf("inOurOut val: %s\n", inOrOut[i]);
+            // printf("filesToBeRedirected: %s\n", filesToBeRedirected[i]);
             cloneSTDOUT = open(filesToBeRedirected[i], O_WRONLY);
             if (cloneSTDOUT == -1)
             {
@@ -216,7 +216,7 @@ int performRedirection(char **instruction, char **inOrOut, char **filesToBeRedir
     while (instruction[r] != NULL)
     {
         // printf("instruction: %s\n", instruction[r]);
-        //printf("isAlpha: %d\n", isalpha(instruction[r][0]));
+        // printf("isAlpha: %d\n", isalpha(instruction[r][0]));
         if (isalpha(instruction[r][0]) == 0)
         {
             instruction[r] = NULL;
@@ -397,7 +397,7 @@ void arrayParseForPipeRedirects(char **child, char **instruction, char **inOrOut
 
 int performPipeWithRedirection(char **leftChild, char **rightChild, char *jString)
 {
-    printf("we are in pipe with redirect function\n");
+    //printf("we are in pipe with redirect function\n");
     int pipefd[2];
     int status;
     int done = 0;
@@ -407,7 +407,7 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
     int i = 0;
     while (leftChild[i] != NULL)
     {
-        printf("%s\n", leftChild[i]);
+        //printf("%s\n", leftChild[i]);
         if (isalpha(leftChild[i][0]) == 0)
         {
             leftChild[i] = NULL;
@@ -418,7 +418,7 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
     int j = 0;
     while (rightChild[j] != NULL)
     {
-        printf("%s\n", rightChild[j]);
+        //printf("%s\n", rightChild[j]);
         if (isalpha(rightChild[j][0]) == 0)
         {
             rightChild[j] = NULL;
@@ -459,14 +459,14 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
                     return 0;
                 }
             }
-            else
-            {
-                wait(NULL);
-                free(instruction);
-                free(inOrOut);
-                free(filesToBeRedirected);
-                return 0;
-            }
+            // else
+            // {
+            //     wait(NULL);
+            //     free(instruction);
+            //     free(inOrOut);
+            //     free(filesToBeRedirected);
+            //     return 0;
+            // }
         }
         else
         {
@@ -489,11 +489,11 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
                     return 0;
                 }
             }
-            else
-            {
-                wait(NULL);
-                return 0;
-            }
+            // else
+            // {
+            //     wait(NULL);
+            //     return 0;
+            // }
         }
     }
 
@@ -529,14 +529,14 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
                     return 0;
                 }
             }
-            else
-            {
-                wait(NULL);
-                free(instruction);
-                free(inOrOut);
-                free(filesToBeRedirected);
-                return 0;
-            }
+            // else
+            // {
+            //     wait(NULL);
+            //     free(instruction);
+            //     free(inOrOut);
+            //     free(filesToBeRedirected);
+            //     return 0;
+            // }
         }
         else
         {
@@ -559,11 +559,11 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
                     return 0;
                 }
             }
-            else
-            {
-                wait(NULL);
-                return 0;
-            }
+            // else
+            // {
+            //     wait(NULL);
+            //     return 0;
+            // }
         }
     }
 
@@ -582,10 +582,10 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
     jobArr[jobPtr].state = 2;
     jobArr[jobPtr].jString = strdup(jString);
     jobArr[jobPtr].pid = lcpid;
-    printf("left cpid: %d\n", lcpid);
+    //printf("left cpid: %d\n", lcpid);
     jobArr[jobPtr].pgid = lcpid;
     jobArr[jobPtr].pid2 = rcpid;
-    printf("right cpid: %d\n", rcpid);
+    //printf("right cpid: %d\n", rcpid);
     jobArr[jobPtr].pgid2 = lcpid;
     jobArr[jobPtr].nProc = 2;
 
@@ -598,7 +598,7 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
         jobArr[jobPtr].ampOrfgOrbgProcess = 1;
         printf("[%d] %d\n", jobArr[jobPtr].jobId, jobArr[jobPtr].pgid);
     }
-    printf("jString: %s\n", jString);
+    //printf("jString: %s\n", jString);
     jobPtr++;
 
     // int retVal = waitpid(rcpid, &status, WUNTRACED);
@@ -614,7 +614,7 @@ int returnJobIndexByPID(pid_t pid)
     int i;
     for (i = 0; i < jobPtr; i++)
     {
-        if (jobArr[i].pgid == pid)
+        if (jobArr[i].pid == pid || jobArr[i].pid2 == pid)
         {
             return i;
         }
@@ -626,11 +626,32 @@ void handler(int sig)
     int status;
     if (ampersandFlag == 0)
     {
+        // int i;
+        // for (i = 0; i < jobPtr; i++)
+        // {
+        //     printf("Job %d: %s", i, jobArr[i].jString);
+        // }
         pid_t pid = waitpid(-1, &status, WNOHANG | WUNTRACED | WCONTINUED);
-        // printf("pid of pipe: %d\n", pid);
+        //printf("pid of pipe: %d\n", pid);
         int returnedJobIndex = returnJobIndexByPID(pid);
         //printf("index of returnedJob: %d\n", returnedJobIndex);
-        tcsetpgrp(0, yash_pgid);
+        if (jobArr[returnedJobIndex].nProc == 2)
+        {
+            if (jobArr[returnedJobIndex].state == 2)
+            {
+                jobArr[returnedJobIndex].state = 0; //halfway
+            }
+            else if (jobArr[returnedJobIndex].state == 0)
+            {
+                jobArr[returnedJobIndex].state = 3;
+                tcsetpgrp(0, yash_pgid);
+            }
+        }
+        else
+        {
+            jobArr[returnedJobIndex].state = 3;
+            tcsetpgrp(0, yash_pgid);
+        }
 
         //printf("pid inside handler: %d\n", jobArr[returnedJobIndex].pid);
         if (WIFEXITED(status))
@@ -649,43 +670,46 @@ void handler(int sig)
                 free(jobArr[returnedJobIndex].argv);
                 free(jobArr[returnedJobIndex].argv2);
             }
-            if (strstr(jobArr[returnedJobIndex].jString, "&") != NULL)
+            if (jobArr[returnedJobIndex].state == 3)
             {
-                recentlyFinishedJobs[RFJPtr] = jobArr[returnedJobIndex];
-                //printf("RFJ %d: %s\n", RFJPtr, recentlyFinishedJobs[RFJPtr].jString);
-                RFJPtr++;
-            }
-
-            // printf("normal exit jobPtr before clear: %d\n", jobPtr);
-            if (returnedJobIndex == jobPtr - 1)
-            {
-                //printf("clearContents block: %d vs %d\n", returnedJobIndex, jobPtr - 1);
-                clearContentsOfStructSlot(returnedJobIndex);
-            }
-            else
-            {
-                int i;
-                for (i = returnedJobIndex; i < jobPtr - 1; i++)
+                if (strstr(jobArr[returnedJobIndex].jString, "&") != NULL)
                 {
-                    // jobArr[i].jobId = jobArr[i + 1].jobId;
-                    // jobArr[i].state = jobArr[i + 1].state;
-                    // jobArr[i].jString = jobArr[i + 1].jString;
-
-                    // jobArr[i].pid = jobArr[i + 1].pid;
-                    // jobArr[i].pgid = jobArr[i + 1].pgid;
-                    // //add args1 here
-
-                    // jobArr[i].pid2 = jobArr[i + 1].pid2;
-                    // jobArr[i].pgid2 = jobArr[i + 1].pgid2;
-                    // //add args2 here
-
-                    // jobArr[i].nProc = jobArr[i + 1].nProc;
-                    // jobArr[i].ampOrfgOrbgProcess = jobArr[i + 1].ampOrfgOrbgProcess;
-                    jobArr[i] = jobArr[i + 1];
-                    // printf("jobArr[i].jString: %s", jobArr[i].jString);
+                    recentlyFinishedJobs[RFJPtr] = jobArr[returnedJobIndex];
+                    //printf("RFJ %d: %s\n", RFJPtr, recentlyFinishedJobs[RFJPtr].jString);
+                    RFJPtr++;
                 }
+
+                // printf("normal exit jobPtr before clear: %d\n", jobPtr);
+                if (returnedJobIndex == jobPtr - 1)
+                {
+                    //printf("clearContents block: %d vs %d\n", returnedJobIndex, jobPtr - 1);
+                    clearContentsOfStructSlot(returnedJobIndex);
+                }
+                else
+                {
+                    int i;
+                    for (i = returnedJobIndex; i < jobPtr - 1; i++)
+                    {
+                        // jobArr[i].jobId = jobArr[i + 1].jobId;
+                        // jobArr[i].state = jobArr[i + 1].state;
+                        // jobArr[i].jString = jobArr[i + 1].jString;
+
+                        // jobArr[i].pid = jobArr[i + 1].pid;
+                        // jobArr[i].pgid = jobArr[i + 1].pgid;
+                        // //add args1 here
+
+                        // jobArr[i].pid2 = jobArr[i + 1].pid2;
+                        // jobArr[i].pgid2 = jobArr[i + 1].pgid2;
+                        // //add args2 here
+
+                        // jobArr[i].nProc = jobArr[i + 1].nProc;
+                        // jobArr[i].ampOrfgOrbgProcess = jobArr[i + 1].ampOrfgOrbgProcess;
+                        jobArr[i] = jobArr[i + 1];
+                        // printf("jobArr[i].jString: %s", jobArr[i].jString);
+                    }
+                }
+                jobPtr--;
             }
-            jobPtr--;
         }
         else if (WIFSIGNALED(status))
         {
