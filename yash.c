@@ -145,10 +145,12 @@ int performRedirection(char **instruction, char **inOrOut, char **filesToBeRedir
 {
     //printf("we are in redirect function \n");
     int status;
-    int cloneSTDIN;
-    int dontCloneSTDIN; // equals 1: file exists for STDIN, equals 0: otherwise
+    int cloneSTDIN = 0;
+    int performCloneSTDIN; // equals 1: file exists for STDIN, equals 0: otherwise
     int cloneSTDOUT;
+    int performCloneSTDOUT;
     int cloneSTDERR;
+    int performCloneSTDERR;
 
     int i;
     for (i = 0; i < sharedSize; i++)
@@ -168,6 +170,7 @@ int performRedirection(char **instruction, char **inOrOut, char **filesToBeRedir
                 // dup2(cloneSTDOUT, 1);
                 // close(cloneSTDOUT);
             }
+            performCloneSTDOUT = 1;
             // else{
             //     dup2(cloneSTDOUT, 1);
             //     close(cloneSTDOUT);
@@ -192,19 +195,20 @@ int performRedirection(char **instruction, char **inOrOut, char **filesToBeRedir
             if (exists == 1)
             {
                 cloneSTDIN = open(filesToBeRedirected[i], O_RDONLY);
+                performCloneSTDIN = 1;
                 // dup2(cloneSTDIN, 0);
                 // close(cloneSTDIN);
             }
             else
             {
                 printf("Sorry, that file doesn't exist.\n");
-                dontCloneSTDIN = 1;
             }
             //printf("STDIN -> %d", cloneSTDIN);
         }
         else if (strcmp(inOrOut[i], "2>") == 0)
         {
             cloneSTDERR = open(filesToBeRedirected[i], O_WRONLY);
+            performCloneSTDERR = 1;
             // dup2(cloneSTDERR, 2);
             // close(cloneSTDERR);
             //printf("STDERR -> %d", cloneSTDERR);
@@ -212,17 +216,23 @@ int performRedirection(char **instruction, char **inOrOut, char **filesToBeRedir
     }
 
     // printf("instruction[0]: %s\n", instruction[0]);
-    int r = 0;
-    while (instruction[r] != NULL)
-    {
-        // printf("instruction: %s\n", instruction[r]);
-        // printf("isAlpha: %d\n", isalpha(instruction[r][0]));
-        if (isalpha(instruction[r][0]) == 0)
-        {
-            instruction[r] = NULL;
-        }
-        r++;
-    }
+    // int r = 0;
+    // while (instruction[r] != NULL)
+    // {
+    //     // printf("instruction: %s\n", instruction[r]);
+    //     // printf("isAlpha: %d\n", isalpha(instruction[r][0]));
+    //     if (isalpha(instruction[r][0]) == 0)
+    //     {
+    //         instruction[r] = NULL;
+    //     }
+    //     r++;
+    // }
+
+    // int v;
+    // for (v = 0; v < sizeof(instruction); v++)
+    // {
+    //     printf("%d: %s\n", v, instruction[v]);
+    // }
 
     pid_t pid;
     pid = fork();
@@ -235,20 +245,27 @@ int performRedirection(char **instruction, char **inOrOut, char **filesToBeRedir
     else if (pid == 0)
     {
         setpgid(0, 0);
-        signal(SIGINT, SIG_DFL);
-        signal(SIGTSTP, SIG_DFL);
-        signal(SIGQUIT, SIG_DFL);
-        signal(SIGTTIN, SIG_DFL);
-        signal(SIGTTOU, SIG_DFL);
-        if (dontCloneSTDIN != 1)
+        // signal(SIGINT, SIG_DFL);
+        // signal(SIGTSTP, SIG_DFL);
+        // signal(SIGQUIT, SIG_DFL);
+        // signal(SIGTTIN, SIG_DFL);
+        // signal(SIGTTOU, SIG_DFL);
+        if (performCloneSTDIN == 1)
         {
             dup2(cloneSTDIN, 0);
+            close(cloneSTDIN);
         }
-        dup2(cloneSTDOUT, 1);
-        dup2(cloneSTDERR, 2);
-        close(cloneSTDIN);
-        close(cloneSTDOUT);
-        close(cloneSTDERR);
+        if (performCloneSTDOUT == 1)
+        {
+            dup2(cloneSTDOUT, 1);
+            close(cloneSTDOUT);
+        }
+        if (performCloneSTDERR == 1)
+        {
+            dup2(cloneSTDERR, 2);
+            close(cloneSTDERR);
+        }
+
         if (execvp(instruction[0], instruction) < 0)
         {
             //printf("Didn't work");
@@ -397,7 +414,7 @@ void arrayParseForPipeRedirects(char **child, char **instruction, char **inOrOut
 
 int performPipeWithRedirection(char **leftChild, char **rightChild, char *jString)
 {
-    //printf("we are in pipe with redirect function\n");
+    printf("we are in pipe with redirect function\n");
     int pipefd[2];
     int status;
     int done = 0;
@@ -407,8 +424,8 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
     int i = 0;
     while (leftChild[i] != NULL)
     {
-        //printf("%s\n", leftChild[i]);
-        if (isalpha(leftChild[i][0]) == 0)
+        printf("%s\n", leftChild[i]);
+        if (isalpha(leftChild[i][0]) == 0 && strstr(leftChild[i], "<") == NULL && strstr(leftChild[i], ">") == NULL && strstr(leftChild[i], "2>") == NULL)
         {
             leftChild[i] = NULL;
         }
@@ -418,8 +435,8 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
     int j = 0;
     while (rightChild[j] != NULL)
     {
-        //printf("%s\n", rightChild[j]);
-        if (isalpha(rightChild[j][0]) == 0)
+        printf("%s\n", rightChild[j]);
+        if (isalpha(rightChild[j][0]) == 0 && strstr(rightChild[j], "<") == NULL && strstr(rightChild[j], ">") == NULL && strstr(rightChild[j], "2>") == NULL)
         {
             rightChild[j] = NULL;
         }
@@ -467,6 +484,9 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
             //     free(filesToBeRedirected);
             //     return 0;
             // }
+            free(instruction);
+            free(inOrOut);
+            free(filesToBeRedirected);
         }
         else
         {
@@ -537,6 +557,9 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
             //     free(filesToBeRedirected);
             //     return 0;
             // }
+            free(instruction);
+            free(inOrOut);
+            free(filesToBeRedirected);
         }
         else
         {
@@ -661,15 +684,15 @@ void handler(int sig)
             //printf("done executing\n");
             // printf("normal exit jobPtr after clear: %d\n", jobPtr);
             // printf("returnedJobIndex: %d\n", returnedJobIndex);
-            if (jobArr[returnedJobIndex].nProc == 1)
-            {
-                free(jobArr[returnedJobIndex].argv);
-            }
-            else
-            {
-                free(jobArr[returnedJobIndex].argv);
-                free(jobArr[returnedJobIndex].argv2);
-            }
+            // if (jobArr[returnedJobIndex].nProc == 1)
+            // {
+            //     free(jobArr[returnedJobIndex].argv);
+            // }
+            // else
+            // {
+            //     free(jobArr[returnedJobIndex].argv);
+            //     free(jobArr[returnedJobIndex].argv2);
+            // }
             if (jobArr[returnedJobIndex].state == 3)
             {
                 if (strstr(jobArr[returnedJobIndex].jString, "&") != NULL)
@@ -716,15 +739,15 @@ void handler(int sig)
             // printf("after -- in WIFSIGNALED: %d\n", jobPtr);
             // printf("you did a ^C\n");
             //printf("^C jobPtr before clear: %d", jobPtr);
-            if (jobArr[returnedJobIndex].nProc == 1)
-            {
-                free(jobArr[returnedJobIndex].argv);
-            }
-            else
-            {
-                free(jobArr[returnedJobIndex].argv);
-                free(jobArr[returnedJobIndex].argv2);
-            }
+            // if (jobArr[returnedJobIndex].nProc == 1)
+            // {
+            //     free(jobArr[returnedJobIndex].argv);
+            // }
+            // else
+            // {
+            //     free(jobArr[returnedJobIndex].argv);
+            //     free(jobArr[returnedJobIndex].argv2);
+            // }
             clearContentsOfStructSlot(returnedJobIndex);
             jobPtr--;
             //printf("^C jobPtr after clear: %d", jobPtr);
@@ -761,7 +784,7 @@ int main()
             //printf("hi");
         }
         ampersandFlag = 0;
-        char name[100];
+        char name[128];
         char **arguments = (char **)malloc(100 * sizeof(char *));
         int index = 1;
         printf("# ");
@@ -770,6 +793,7 @@ int main()
             free(arguments);
             break;
         }
+        printf("name: %s", name);
         if (strcmp(name, "\n") == 0)
         {
             free(arguments);
@@ -886,6 +910,8 @@ int main()
 
             i++;
         }
+
+        printf("%d, %d", index, i);
 
         if (pipeFlag == 1)
         {
