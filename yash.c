@@ -103,7 +103,8 @@ int performExec(char **arg, char *jString)
 
         if (execvp(arg[0], arg) < 0)
         {
-            return 0;
+            //printf("didn't work\n");
+            return 1;
         }
     }
     else
@@ -119,8 +120,9 @@ int performExec(char **arg, char *jString)
         jobArr[jobPtr].state = 2;
         jobArr[jobPtr].jString = strdup(jString);
         jobArr[jobPtr].pid = pid;
-        //printf("pid inside of exec: %d\n", jobArr[jobPtr].pid);
         jobArr[jobPtr].pgid = pid;
+        // jobArr[jobPtr].argv = (char **)malloc(50 * sizeof(char *));
+        // jobArr[jobPtr].argv = arg;
         jobArr[jobPtr].nProc = 1;
 
         if (strstr(jString, "&") == NULL) //if there is no ampersand flag
@@ -130,6 +132,7 @@ int performExec(char **arg, char *jString)
         else
         {
             jobArr[jobPtr].ampOrfgOrbgProcess = 1;
+            printf("[%d] %d\n", jobArr[jobPtr].jobId, pid);
         }
         jobPtr++;
 
@@ -232,6 +235,11 @@ int performRedirection(char **instruction, char **inOrOut, char **filesToBeRedir
     else if (pid == 0)
     {
         setpgid(0, 0);
+        signal(SIGINT, SIG_DFL);
+        signal(SIGTSTP, SIG_DFL);
+        signal(SIGQUIT, SIG_DFL);
+        signal(SIGTTIN, SIG_DFL);
+        signal(SIGTTOU, SIG_DFL);
         if (dontCloneSTDIN != 1)
         {
             dup2(cloneSTDIN, 0);
@@ -270,6 +278,7 @@ int performRedirection(char **instruction, char **inOrOut, char **filesToBeRedir
         else
         {
             jobArr[jobPtr].ampOrfgOrbgProcess = 1;
+            printf("[%d] %d\n", jobArr[jobPtr].jobId, pid);
         }
         jobPtr++;
     }
@@ -439,6 +448,11 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
             else if (lcpid == 0)
             {
                 setpgid(0, 0);
+                signal(SIGINT, SIG_DFL);
+                signal(SIGTSTP, SIG_DFL);
+                signal(SIGQUIT, SIG_DFL);
+                signal(SIGTTIN, SIG_DFL);
+                signal(SIGTTOU, SIG_DFL);
                 if (execvp(instruction[0], instruction) < 0)
                 {
                     //printf("Didn't work");
@@ -464,6 +478,11 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
             else if (lcpid == 0)
             {
                 setpgid(0, 0);
+                signal(SIGINT, SIG_DFL);
+                signal(SIGTSTP, SIG_DFL);
+                signal(SIGQUIT, SIG_DFL);
+                signal(SIGTTIN, SIG_DFL);
+                signal(SIGTTOU, SIG_DFL);
                 if (execvp(leftChild[0], leftChild) < 0)
                 {
                     //printf("Didn't work");
@@ -499,6 +518,11 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
             else if (rcpid == 0)
             {
                 setpgid(0, lcpid);
+                signal(SIGINT, SIG_DFL);
+                signal(SIGTSTP, SIG_DFL);
+                signal(SIGQUIT, SIG_DFL);
+                signal(SIGTTIN, SIG_DFL);
+                signal(SIGTTOU, SIG_DFL);
                 if (execvp(instruction[0], instruction) < 0)
                 {
                     //printf("Didn't work");
@@ -524,6 +548,11 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
             else if (rcpid == 0)
             {
                 setpgid(0, lcpid);
+                signal(SIGINT, SIG_DFL);
+                signal(SIGTSTP, SIG_DFL);
+                signal(SIGQUIT, SIG_DFL);
+                signal(SIGTTIN, SIG_DFL);
+                signal(SIGTTOU, SIG_DFL);
                 if (execvp(rightChild[0], rightChild) < 0)
                 {
                     //printf("Didn't work");
@@ -567,7 +596,9 @@ int performPipeWithRedirection(char **leftChild, char **rightChild, char *jStrin
     else
     {
         jobArr[jobPtr].ampOrfgOrbgProcess = 1;
+        printf("[%d] %d\n", jobArr[jobPtr].jobId, jobArr[jobPtr].pgid);
     }
+    printf("jString: %s\n", jString);
     jobPtr++;
 
     // int retVal = waitpid(rcpid, &status, WUNTRACED);
@@ -596,6 +627,7 @@ void handler(int sig)
     if (ampersandFlag == 0)
     {
         pid_t pid = waitpid(-1, &status, WNOHANG | WUNTRACED | WCONTINUED);
+        // printf("pid of pipe: %d\n", pid);
         int returnedJobIndex = returnJobIndexByPID(pid);
         //printf("index of returnedJob: %d\n", returnedJobIndex);
         tcsetpgrp(0, yash_pgid);
@@ -608,6 +640,15 @@ void handler(int sig)
             //printf("done executing\n");
             // printf("normal exit jobPtr after clear: %d\n", jobPtr);
             // printf("returnedJobIndex: %d\n", returnedJobIndex);
+            if (jobArr[returnedJobIndex].nProc == 1)
+            {
+                free(jobArr[returnedJobIndex].argv);
+            }
+            else
+            {
+                free(jobArr[returnedJobIndex].argv);
+                free(jobArr[returnedJobIndex].argv2);
+            }
             if (strstr(jobArr[returnedJobIndex].jString, "&") != NULL)
             {
                 recentlyFinishedJobs[RFJPtr] = jobArr[returnedJobIndex];
@@ -651,6 +692,15 @@ void handler(int sig)
             // printf("after -- in WIFSIGNALED: %d\n", jobPtr);
             // printf("you did a ^C\n");
             //printf("^C jobPtr before clear: %d", jobPtr);
+            if (jobArr[returnedJobIndex].nProc == 1)
+            {
+                free(jobArr[returnedJobIndex].argv);
+            }
+            else
+            {
+                free(jobArr[returnedJobIndex].argv);
+                free(jobArr[returnedJobIndex].argv2);
+            }
             clearContentsOfStructSlot(returnedJobIndex);
             jobPtr--;
             //printf("^C jobPtr after clear: %d", jobPtr);
@@ -684,6 +734,7 @@ int main()
     {
         while (tcgetpgrp(0) != yash_pgid)
         {
+            //printf("hi");
         }
         ampersandFlag = 0;
         char name[100];
@@ -692,10 +743,12 @@ int main()
         printf("# ");
         if (fgets(name, 128, stdin) == 0)
         {
+            free(arguments);
             break;
         }
         if (strcmp(name, "\n") == 0)
         {
+            free(arguments);
             continue;
         }
 
@@ -706,6 +759,56 @@ int main()
             printf("[%d] - Done    %s\n", recentlyFinishedJobs[r].jobId, recentlyFinishedJobs[r].jString);
         }
         RFJPtr = 0;
+
+        if (strcmp(name, "fg\n") == 0)
+        {
+            int tempStatus;
+            //printf("we are in fg");
+            if (jobPtr == 0) //nothing in jobArr
+            {
+                continue;
+            }
+            else
+            {
+                job_t job = jobArr[jobPtr - 1];
+                printf("%s", job.jString);
+                //jobPtr--;
+                printf("jobstring: %s", job.jString);
+                tcsetpgrp(0, job.pgid);
+                kill(job.pgid, SIGCONT);
+                waitpid(-1, &tempStatus, WUNTRACED);
+                printf("after wait");
+                tcsetpgrp(0, yash_pgid);
+            }
+            free(arguments);
+            continue;
+        }
+
+        if (strcmp(name, "bg\n") == 0)
+        {
+            int tempStatus;
+            //printf("we are in bg");
+            if (jobPtr == 0) //nothing in jobArr
+            {
+                continue;
+            }
+            else
+            {
+                job_t job = jobArr[jobPtr - 1];
+                printf("[%d] + %s &", job.state, job.jString);
+                jobArr[jobPtr - 1].state = 2;
+                strcat(jobArr[jobPtr - 1].jString, "&");
+                //jobPtr--;
+                //printf("jobstring: %s", job.jString);
+                //tcsetpgrp(0, job.pgid);
+                kill(job.pgid, SIGCONT);
+                //waitpid(-1, &tempStatus, WUNTRACED);
+                //printf("after wait");
+                //tcsetpgrp(0, yash_pgid);
+            }
+            free(arguments);
+            continue;
+        }
 
         char *jString = malloc(sizeof(char *));
         strcpy(jString, name);
@@ -830,6 +933,10 @@ int main()
             // printf("right before performExec(jString): %s\n", jString);
             // printf("right before performExec(name): %s\n", name);
             int retVal = performExec(arguments, jString);
+            if (retVal == 1)
+            {
+                tcsetpgrp(0, yash_pgid);
+            }
         }
 
         free(arguments);
